@@ -1,58 +1,111 @@
 # 🧹 node_modules Cleaner + pnpm Reinstall Tool
 
-Two-part shell script system to clean up heavy `node_modules` folders and selectively reinstall using `pnpm`.
+This 2-script toolkit helps you clean up bloated `node_modules` folders across many projects and selectively reinstall using `pnpm`.
 
-## ✅ Usage
+---
 
-### 1. Clean and Log (`clean-node_modules-log.sh`)
+## ✅ Part 1: Clean and Log  
+Script: `clean-node_modules-log.sh`
 
-Deletes `node_modules` folders and logs affected project paths to a JSON file.
-
+### 🔧 Basic Syntax
 ```bash
-./clean-node_modules-log.sh [-d depth] [optional_root_folder]
+./clean-node_modules-log.sh [-d N] [--no-depth] [-v] [folder]
 ```
 
-- `-d` = max directory depth to scan (default: `6`)
-- `[optional_root_folder]` = where to search, defaults to `~/projects`
-- Output is saved to `pnpm-reinstall.json` (in valid JSON format)
-- You can edit this file to control which folders are reinstalled later
+| Option         | Description                                      |
+|----------------|--------------------------------------------------|
+| `-d N`         | Max depth to scan (default: 6)                   |
+| `--no-depth`   | Unlimited depth (overrides `-d`)                 |
+| `-v`           | Verbose logging to `scan.log`                    |
+| `[folder]`     | Root folder to scan (default: `~/projects`)      |
 
-Example:
+---
+
+### 🌐 Root Folder Notes
+
+- Use `.` to scan the **current folder**:
+  ```bash
+  ./clean-node_modules-log.sh .
+  ```
+- Use `~` to scan your home directory:
+  ```bash
+  ./clean-node_modules-log.sh --no-depth ~
+  ```
+- Use absolute or relative paths:
+  ```bash
+  ./clean-node_modules-log.sh -d 4 ~/Downloads
+  ./clean-node_modules-log.sh ../work
+  ```
+
+---
+
+### 📁 Output Files
+
+- `pnpm-reinstall.json`: list of project folders to reinstall later
+- `scan.log`: full list of scanned folders (even skipped ones)
+
+---
+
+### 🧪 Examples
+
+- Clean deeply nested projects:
+  ```bash
+  ./clean-node_modules-log.sh --no-depth -v ~/code
+  ```
+
+- Limit scan to depth 3 for speed:
+  ```bash
+  ./clean-node_modules-log.sh -d 3 .
+  ```
+
+- Scan a mounted external drive:
+  ```bash
+  ./clean-node_modules-log.sh -d 8 /Volumes/SSD/dev
+  ```
+
+---
+
+## ✅ Part 2: Reinstall  
+Script: `pnpm-reinstall-from-json.sh`
+
+### 🔧 Basic Syntax
 ```bash
-./clean-node_modules-log.sh -d 4 ~/workspace
+./pnpm-reinstall-from-json.sh [--dry-run]
 ```
 
-### 2. Reinstall (`pnpm-reinstall-from-json.sh`)
+| Option         | Description                                      |
+|----------------|--------------------------------------------------|
+| `--dry-run`    | Prints folders but doesn’t run `pnpm install`    |
 
-Installs dependencies using `pnpm` for each folder listed in `pnpm-reinstall.json`.
+---
 
-```bash
-./pnpm-reinstall-from-json.sh
-```
+### 🧪 Examples
 
-Each folder will run:
-```bash
-cd <folder> && pnpm install
-```
+- Run all installs from JSON:
+  ```bash
+  ./pnpm-reinstall-from-json.sh
+  ```
 
-### 🧪 Example Workflow
+- Dry-run to preview actions:
+  ```bash
+  ./pnpm-reinstall-from-json.sh --dry-run
+  ```
 
-1. Clean old installs:
-   ```bash
-   ./clean-node_modules-log.sh -d 5 ~/dev
-   ```
-2. Edit `pnpm-reinstall.json` to keep only relevant folders
-3. Reinstall only selected projects:
-   ```bash
-   ./pnpm-reinstall-from-json.sh
-   ```
+- Combine with JSON editing:
+  1. Clean folders and create `pnpm-reinstall.json`
+  2. Edit it manually to remove some entries
+  3. Run reinstall only where needed
+
+---
 
 ## 📦 Requirements
 
 - `zsh`
 - `pnpm`
-- `jq` (`brew install jq` if missing)
+- `jq` (install via `brew install jq`)
+
+---
 
 ## 💡 Tip
 
-This tool is ideal for reclaiming space across many projects, while still letting you selectively reinstall where needed.
+This tool is ideal for cleaning up long-lived development folders, reclaiming disk space, and only rebuilding projects you still care about. Perfect for `~/Downloads`, `~/code`, `~/projects`, or mounted archives.
