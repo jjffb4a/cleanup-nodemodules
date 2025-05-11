@@ -1,36 +1,55 @@
-# 🧹 node_modules Cleaner + pnpm Reinstall Tool
+#!/bin/zsh
 
-Two-part shell script system to clean up heavy `node_modules` folders and selectively reinstall using `pnpm`.
+# Defaults
+ROOT="$HOME/projects"
+DEPTH=6
+VERBOSE=false
+LOG="./pnpm-reinstall.json"
+SCANLOG="./scan.log"
 
-## ✅ Usage
+# Parse options
+while getopts "d:v" opt; do
+  case $opt in
+    d) DEPTH=$OPTARG ;;
+    v) VERBOSE=true ;;
+    *) echo "Usage: $0 [-d depth] [-v] [optional_root_folder]"; exit 1 ;;
+  esac
+done
+shift $((OPTIND - 1))
+[[ -n "$1" ]] && ROOT="$1"
 
-### 1. Clean and Log (`clean-node_modules-log.sh`)
+echo "📂 Scanning in: $ROOT (max depth $DEPTH)"
+echo "📝 Logging to: $LOG"
+echo "🧾 Verbose log: $SCANLOG"
+> "$LOG"
+> "$SCANLOG"
 
-Deletes `node_modules` folders and logs affected project paths.
+echo '[' >> "$LOG"
+FIRST=true
 
-```bash
-./clean-node_modules-log.sh [optional_root_folder]
-```
+find "$ROOT" -maxdepth "$DEPTH" -type d -name "node_modules" -prune | while read -r NODE_MODULES; do
+  PROJECT_DIR="$(dirname "$NODE_MODULES")"
 
-- If no path is given, defaults to `~/projects`
-- Output saved to `pnpm-reinstall.json`
+  # Log every folder scanned
+  echo "$PROJECT_DIR" >> "$SCANLOG"
 
-### 2. Reinstall (`pnpm-reinstall-from-json.sh`)
+  if [[ -f "$PROJECT_DIR/package.json" || -f "$PROJECT_DIR/pnpm-lock.yaml" ]]; then
+    echo "♻️  Deleting: $PROJECT_DIR/node_modules"
+    rm -rf "$NODE_MODULES"
 
-Installs dependencies only for logged folders.
+    # Add entry to JSON
+    if $FIRST; then
+      echo "  \"$PROJECT_DIR\"" >> "$LOG"
+      FIRST=false
+    else
+      echo "  ,\"$PROJECT_DIR\"" >> "$LOG"
+    fi
+  else
+    if $VERBOSE; then
+      echo "⚠️  Skipped (no package.json): $PROJECT_DIR"
+    fi
+  fi
+done
 
-```bash
-./pnpm-reinstall-from-json.sh
-```
-
-Edit `pnpm-reinstall.json` manually to skip unwanted folders before running this.
-
-## 📦 Requirements
-
-- `zsh`
-- `pnpm`
-- `jq` (`brew install jq` if missing)
-
-## 💡 Tip
-
-Great for cleaning up old project trees without immediately rebuilding everything.
+echo "]" >> "$LOG"
+echo "✅ Done. JSON: $LOG, Full scan log: $SCANLOG"
